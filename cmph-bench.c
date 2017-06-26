@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 
     //Create minimal perfect hash function using the chosen algorithm.
     cmph_config_t *config = cmph_config_new(source);
-    cmph_config_set_algo(config, CMPH_BRZ);
+    cmph_config_set_algo(config, algo);
     cmph_config_set_mphf_fd(config, mphf_fd);
     cmph_t *hash = cmph_new(config);
     cmph_config_destroy(config);
