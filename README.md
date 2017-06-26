@@ -11,8 +11,8 @@ You can download cmph and build it as follows:
 
 You can download cmph-bench and build it as follows:
 
-    git clone https://github.com/jbelton/baker
-    git clone https://github.com/jbelton/cmph-bench
+    git clone https://github.com/jimbelton/baker
+    git clone https://github.com/jimbelton/cmph-bench
     cd cmph-bench
     ../baker/baker
     
