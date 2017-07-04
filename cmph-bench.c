@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     unsigned keyCount = cmph_size(hash);
 
     if (csvOut)
-        printf("\"%s\", %u, %lu.%06lu, %lu, ", argv[1], keyCount, elapsed / 1000000, elapsed % 1000000, memUsed);
+        printf("\"%s\", %u, %lu, %lu, ", argv[1], keyCount, elapsed, memUsed);
     else
         printf("Constructed %s MPH in %lu.%06lu seconds, memory %lu\n", argv[1], elapsed / 1000000, elapsed % 1000000, memUsed);
 
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     memUsed = GetMemAlloced() - memBase;
 
     if (csvOut)
-        printf("%lu.%06lu, %lu, ", elapsed / 1000000, elapsed % 1000000, memUsed);
+        printf("%lu, %lu, ", elapsed, memUsed);
     else
         printf("Loaded MPH in %lu.%06lu seconds, memory %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
 
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     elapsed = GetTimeStamp()  - start;
 
     if (csvOut)
-        printf("%lu.%06lu, %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
+        printf("%lu, %lu\n", elapsed, memUsed);
     else
         printf("Looked up %u keys in MPH in %lu.%06lu seconds, corpus size %lu\n",
                key, elapsed / 1000000, elapsed % 1000000, memUsed);
