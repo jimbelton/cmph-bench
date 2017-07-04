@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
@@ -23,10 +24,28 @@ static size_t GetMemAlloced(void)
     return mallInfo.uordblks;    /* Total allocated space (bytes) */
 }
 
+static void usage(void)
+{
+    fprintf(stderr, "usage: cmph-bench [-c] (bdz|bdz-ph|bmz|bmz8|brz|chd|chd-ph|chm|fch)\n"
+                    "    -c: Output CSV line for graphing\n");
+    exit(1);
+}
+
 // Create minimal perfect hash function from in-memory vector
 int main(int argc, char **argv)
 {
-    CMPH_ALGO algo = CMPH_COUNT;
+    bool      csvOut = false;
+    CMPH_ALGO algo   = CMPH_COUNT;
+
+    while (argc > 1 && argv[1][0] == '-') {
+        if (argv[1][1] == 'c')
+            csvOut = true;
+        else
+            usage();
+
+        argv++;
+        argc--;
+    }
 
     if (argc > 1) {
         if      (strcmp(argv[1], "bdz"   ) == 0) algo = CMPH_BDZ;
@@ -40,10 +59,8 @@ int main(int argc, char **argv)
         else if (strcmp(argv[1], "fch"   ) == 0) algo = CMPH_FCH;
     }
 
-    if (algo == CMPH_COUNT) {
-        fprintf(stderr, "usage: cmph-bench (bdz|bdz-ph|bmz|bmz8|brz|chd|chd-ph|chm|fch)\n");
-        exit(1);
-    }
+    if (algo == CMPH_COUNT)
+        usage();
 
     // Use the corpus-words as keys
     FILE * corpusStream;
@@ -62,9 +79,14 @@ int main(int argc, char **argv)
     cmph_t *hash = cmph_new(config);
     cmph_config_destroy(config);
     //cmph_io_vector_adapter_destroy(source);
-    uint64_t elapsed = GetTimeStamp()  - start;
-    size_t   memUsed = GetMemAlloced() - memBase;
-    printf("Constructed MPH in %lu.%06lu seconds, memory %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
+    uint64_t elapsed  = GetTimeStamp()  - start;
+    size_t   memUsed  = GetMemAlloced() - memBase;
+    unsigned keyCount = cmph_size(hash);
+
+    if (csvOut)
+        printf("\"%s\", %u, %lu.%06lu, %lu, ", argv[1], keyCount, elapsed / 1000000, elapsed % 1000000, memUsed);
+    else
+        printf("Constructed %s MPH in %lu.%06lu seconds, memory %lu\n", argv[1], elapsed / 1000000, elapsed % 1000000, memUsed);
 
     // Save the hash
     cmph_dump(hash, mphf_fd);
@@ -79,7 +101,11 @@ int main(int argc, char **argv)
     fclose(mphf_fd);
     elapsed = GetTimeStamp()  - start;
     memUsed = GetMemAlloced() - memBase;
-    printf("Loaded MPH in %lu.%06lu seconds, memory %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
+
+    if (csvOut)
+        printf("%lu.%06lu, %lu, ", elapsed / 1000000, elapsed % 1000000, memUsed);
+    else
+        printf("Loaded MPH in %lu.%06lu seconds, memory %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
 
     // Slurp in corpus
     struct stat corpusStat;
@@ -89,7 +115,6 @@ int main(int argc, char **argv)
     assert(corpusStream = fopen("corpus-words", "r"));
     assert(fread(corpus, 1, corpusStat.st_size, corpusStream) == corpusStat.st_size);
     char **  keys;
-    unsigned keyCount = cmph_size(hash);
     assert(keys = malloc(keyCount * sizeof(char *)));
 
     memUsed = corpusStat.st_size;
@@ -123,8 +148,12 @@ int main(int argc, char **argv)
     }
 
     elapsed = GetTimeStamp()  - start;
-    printf("Looked up %u keys in MPH in %lu.%06lu seconds, corpus size %lu\n",
-           key, elapsed / 1000000, elapsed % 1000000, memUsed);
+
+    if (csvOut)
+        printf("%lu.%06lu, %lu\n", elapsed / 1000000, elapsed % 1000000, memUsed);
+    else
+        printf("Looked up %u keys in MPH in %lu.%06lu seconds, corpus size %lu\n",
+               key, elapsed / 1000000, elapsed % 1000000, memUsed);
 
     //Destroy hash
     cmph_destroy(hash);
