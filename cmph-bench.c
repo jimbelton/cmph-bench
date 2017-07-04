@@ -88,19 +88,38 @@ int main(int argc, char **argv)
     assert(corpus = malloc(corpusStat.st_size));
     assert(corpusStream = fopen("corpus-words", "r"));
     assert(fread(corpus, 1, corpusStat.st_size, corpusStream) == corpusStat.st_size);
+    char **  keys;
+    unsigned keyCount = cmph_size(hash);
+    assert(keys = malloc(keyCount * sizeof(char *)));
 
-    start   = GetTimeStamp();
     memUsed = corpusStat.st_size;
     unsigned key;
 
     for (key = 0; corpusStat.st_size; key++) {
+        keys[key] = corpus;
         char * end;
         assert(end = strchr(corpus, '\n'));    // Corpus must end in a '\n'
         *end = '\0';
-        unsigned int id = cmph_search(hash, corpus, (cmph_uint32)(end - corpus));
-        //fprintf(stderr, "key:%s -- hash:%u\n", corpus, id);
         corpusStat.st_size -= end - corpus + 1;
         corpus              = end + 1;
+    }
+
+    assert(key == keyCount);
+    srand(17);    // Same random sequence every time
+
+    // Permute the keys
+    for (key = 0; key < keyCount; key++) {
+        unsigned other = rand() % keyCount;
+        char *   temp  = keys[key];
+        keys[key]      = keys[other];
+        keys[other]    = temp;
+    }
+
+    start = GetTimeStamp();
+
+    for (key = 0; key < keyCount; key++) {
+        unsigned int id = cmph_search(hash, keys[key], (cmph_uint32)strlen(keys[key]));
+        //fprintf(stderr, "key:%s -- hash:%u\n", corpus, id);
     }
 
     elapsed = GetTimeStamp()  - start;
