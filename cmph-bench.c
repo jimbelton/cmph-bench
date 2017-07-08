@@ -26,8 +26,9 @@ static size_t GetMemAlloced(void)
 
 static void usage(void)
 {
-    fprintf(stderr, "usage: cmph-bench [-c] (bdz|bdz-ph|bmz|bmz8|brz|chd|chd-ph|chm|fch)\n"
-                    "    -c: Output CSV line for graphing\n");
+    fprintf(stderr, "usage: cmph-bench [-c|-m] (bdz|bdz-ph|bmz|bmz8|brz|chd|chd-ph|chm|fch)\n"
+                    "    -c: Output CSV line for graphing\n"
+                    "    -m: Benchmark misses instead of hits\n");
     exit(1);
 }
 
@@ -35,11 +36,14 @@ static void usage(void)
 int main(int argc, char **argv)
 {
     bool      csvOut = false;
+    bool      misses = false;
     CMPH_ALGO algo   = CMPH_COUNT;
 
     while (argc > 1 && argv[1][0] == '-') {
         if (argv[1][1] == 'c')
             csvOut = true;
+        else if (argv[1][1] == 'm')
+            misses = true;
         else
             usage();
 
@@ -119,32 +123,48 @@ int main(int argc, char **argv)
 
     memUsed = corpusStat.st_size;
     unsigned key;
-
-    for (key = 0; corpusStat.st_size; key++) {
-        keys[key] = corpus;
-        char * end;
-        assert(end = strchr(corpus, '\n'));    // Corpus must end in a '\n'
-        *end = '\0';
-        corpusStat.st_size -= end - corpus + 1;
-        corpus              = end + 1;
-    }
-
-    assert(key == keyCount);
     srand(17);    // Same random sequence every time
 
-    // Permute the keys
-    for (key = 0; key < keyCount; key++) {
-        unsigned other = rand() % keyCount;
-        char *   temp  = keys[key];
-        keys[key]      = keys[other];
-        keys[other]    = temp;
+    if (!misses) {
+        for (key = 0; corpusStat.st_size; key++) {
+            keys[key] = corpus;
+            char * end;
+            assert(end = strchr(corpus, '\n'));    // Corpus must end in a '\n'
+            *end = '\0';
+            corpusStat.st_size -= end - corpus + 1;
+            corpus              = end + 1;
+        }
+
+        assert(key == keyCount);
+
+        // Permute the keys
+        for (key = 0; key < keyCount; key++) {
+            unsigned other = rand() % keyCount;
+            char *   temp  = keys[key];
+            keys[key]      = keys[other];
+            keys[other]    = temp;
+        }
     }
 
     start = GetTimeStamp();
 
-    for (key = 0; key < keyCount; key++) {
-        unsigned int id = cmph_search(hash, keys[key], (cmph_uint32)strlen(keys[key]));
-        //fprintf(stderr, "key:%s -- hash:%u\n", corpus, id);
+    if (!misses) {
+        for (key = 0; key < keyCount; key++) {
+            unsigned int id = cmph_search(hash, keys[key], (cmph_uint32)strlen(keys[key]));
+            (void)id;
+            //fprintf(stderr, "key:%s -- hash:%u\n", corpus, id);
+        }
+    }
+    else {
+        for (key = 0; key < keyCount; key++) {
+            char     keyBuf[32];
+            unsigned keyValue = rand();
+            sprintf(keyBuf, "%u", keyValue);
+            unsigned int id = cmph_search(hash, keyBuf, (cmph_uint32)strlen(keyBuf));
+            (void)id;
+//            if (keyValue >= keyCount && id < keyCount)
+//                fprintf(stderr, "%s found at id %u\n", keyBuf, id);
+        }
     }
 
     elapsed = GetTimeStamp()  - start;
